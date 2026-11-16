@@ -1,0 +1,4 @@
+{
+  "builds": [{"src": "dashboard-premium/package.json", "use": "@vercel/next"}],
+  "routes": [{"src": "/(.*)", "dest": "dashboard-premium/$1"}]
+}

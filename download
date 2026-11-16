@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+apihunter_out/
+*.log
+.env
+.DS_Store
+# Dashboard premium
+dashboard-premium/node_modules/
+dashboard-premium/.next/
+dashboard-premium/out/
+dashboard-premium/dist/
+# Old classic dashboard build artifacts
+.dash_check.js

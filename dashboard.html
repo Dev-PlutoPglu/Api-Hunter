@@ -1,0 +1,969 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API Hunter — Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%94%8D%3C/text%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#070b14; --glass:rgba(17,24,39,.58); --glass-2:rgba(13,19,32,.72);
+  --line:rgba(148,163,184,.14); --line-strong:rgba(148,163,184,.24);
+  --text:#eef2f9; --dim:#94a3b8; --faint:#64748b;
+  --accent:#6366f1; --accent-2:#22d3ee; --accent-soft:rgba(99,102,241,.16);
+  --green:#10b981; --yellow:#f59e0b; --red:#ef4444; --blue:#3b82f6; --magenta:#d946ef;
+  --shadow:0 10px 40px -12px rgba(0,0,0,.55);
+  --radius:16px;
+}
+html[data-theme="light"]{
+  --bg:#f1f5f9; --glass:rgba(255,255,255,.66); --glass-2:rgba(255,255,255,.82);
+  --line:rgba(15,23,42,.09); --line-strong:rgba(15,23,42,.16);
+  --text:#0f172a; --dim:#475569; --faint:#94a3b8;
+  --accent-soft:rgba(99,102,241,.12);
+  --shadow:0 10px 40px -14px rgba(15,23,42,.22);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--text);min-height:100vh;
+  font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;padding:22px 26px 70px;overflow-x:hidden;
+}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+.hint{font-size:12px;color:var(--faint);line-height:1.6}
+.hidden{display:none!important}
+
+/* ── background ───────────────────────────────────────────── */
+.orb{position:fixed;border-radius:50%;filter:blur(100px);opacity:.42;z-index:0;pointer-events:none}
+.orb.a{width:560px;height:560px;background:radial-gradient(circle,#6366f1,transparent 66%);top:-180px;left:-140px;animation:drift 24s ease-in-out infinite}
+.orb.b{width:480px;height:480px;background:radial-gradient(circle,#22d3ee,transparent 66%);bottom:-160px;right:-120px;animation:drift 30s ease-in-out infinite reverse}
+.orb.c{width:400px;height:400px;background:radial-gradient(circle,#d946ef,transparent 66%);top:40%;left:45%;animation:drift 36s ease-in-out infinite}
+@keyframes drift{50%{transform:translate(80px,60px) scale(1.1)}}
+
+/* ── header ───────────────────────────────────────────────── */
+header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px;position:relative;z-index:1}
+.brand{display:flex;align-items:center;gap:12px;font-size:21px;font-weight:800;letter-spacing:-.02em}
+.brand .mark{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:20px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:0 0 28px -4px rgba(99,102,241,.55)}
+.brand em{font-style:normal;background:linear-gradient(90deg,var(--accent),var(--accent-2));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.brand small{color:var(--dim);font-weight:500;font-size:12px;letter-spacing:0}
+.spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border-radius:999px;font-weight:700;
+  font-size:11px;text-transform:uppercase;letter-spacing:.08em;background:var(--glass);border:1px solid var(--line);
+  backdrop-filter:blur(14px)}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--faint)}
+.pill.running{color:var(--accent-2);border-color:rgba(34,211,238,.4)}
+.pill.running::before{background:var(--accent-2);animation:pulse 1.3s infinite}
+.pill.done{color:var(--green);border-color:rgba(16,185,129,.35)}
+.pill.done::before{background:var(--green)}
+.pill.error{color:var(--red);border-color:rgba(239,68,68,.35)}
+.pill.error::before{background:var(--red)}
+.pill.cancelled{color:var(--yellow);border-color:rgba(245,158,11,.35)}
+.pill.cancelled::before{background:var(--yellow)}
+@keyframes pulse{50%{opacity:.35}}
+.icon-btn{background:var(--glass);border:1px solid var(--line);color:var(--dim);border-radius:11px;
+  padding:8px 11px;cursor:pointer;font-size:15px;line-height:1;backdrop-filter:blur(14px);transition:.18s}
+.icon-btn:hover{color:var(--text);border-color:var(--line-strong);transform:translateY(-1px)}
+
+/* ── layout ───────────────────────────────────────────────── */
+main{display:grid;grid-template-columns:400px minmax(0,1fr);gap:20px;align-items:start;position:relative;z-index:1}
+@media(max-width:1100px){main{grid-template-columns:1fr}}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+.panel{background:var(--glass);border:1px solid var(--line);border-radius:var(--radius);padding:20px;
+  backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);
+  box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.05)}
+.panel>h2{font-size:11.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--dim);margin-bottom:16px;
+  display:flex;align-items:center;gap:9px;font-weight:700}
+.panel>h2 .ic{font-size:15px;filter:saturate(1.2)}
+.panel>h2 .tag{font-size:9px;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;
+  padding:2px 8px;border-radius:99px;font-weight:800;letter-spacing:.08em}
+
+/* ── form ─────────────────────────────────────────────────── */
+label{display:block;font-size:12px;color:var(--dim);margin:13px 0 5px;font-weight:600}
+label:first-of-type{margin-top:0}
+input,select,textarea{width:100%;background:var(--glass-2);border:1px solid var(--line);color:var(--text);
+  border-radius:11px;padding:9px 12px;font:13px/1.5 inherit;transition:.18s;backdrop-filter:blur(8px)}
+input::placeholder,textarea::placeholder{color:var(--faint)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+textarea{resize:vertical;min-height:58px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2394a3b8' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:30px}
+.row{display:flex;gap:9px}.row>*{flex:1;min-width:0}
+.checks{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px}
+.checks label{display:flex;align-items:center;gap:7px;margin:0;color:var(--text);font-size:12px;font-weight:500}
+.checks input{width:auto;accent-color:var(--accent)}
+button{cursor:pointer;border:none;border-radius:11px;padding:11px 15px;font-weight:700;font-size:13px;
+  transition:.18s;font-family:inherit}
+button:active{transform:translateY(1px) scale(.99)}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;width:100%;margin-top:18px;
+  box-shadow:0 6px 24px -6px rgba(99,102,241,.5)}
+.btn-primary:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 32px -6px rgba(99,102,241,.65)}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed}
+.btn-ghost{background:var(--glass-2);border:1px solid var(--line);color:var(--text);width:100%;margin-top:10px}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger{background:transparent;border:1px solid rgba(239,68,68,.5);color:var(--red);width:100%;margin-top:10px}
+.btn-danger:hover{background:rgba(239,68,68,.1)}
+.kbd{background:var(--glass-2);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;
+  padding:1px 6px;font-size:10.5px;font-family:ui-monospace,monospace;color:var(--dim);font-weight:600}
+
+/* ── reverse cards ────────────────────────────────────────── */
+.rev-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:560px){.rev-grid{grid-template-columns:1fr}}
+.rev-card{background:var(--glass-2);border:1px solid var(--line);border-radius:14px;padding:14px;transition:.18s}
+.rev-card:hover{border-color:rgba(99,102,241,.4);transform:translateY(-1px)}
+.rev-card h3{font-size:13px;margin-bottom:10px;display:flex;align-items:center;gap:8px;font-weight:700}
+.rev-card h3 .tag{font-size:8.5px;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;
+  padding:2px 7px;border-radius:99px;font-weight:800;letter-spacing:.08em}
+
+/* ── stats ────────────────────────────────────────────────── */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(106px,1fr));gap:12px;margin-bottom:18px}
+.stat{background:var(--glass-2);border:1px solid var(--line);border-radius:14px;padding:13px 14px;
+  backdrop-filter:blur(10px);transition:.18s}
+.stat:hover{transform:translateY(-2px);border-color:var(--line-strong)}
+.stat b{display:block;font-size:25px;line-height:1.15;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.stat span{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.09em;font-weight:700}
+.stat.g b{color:var(--green)} .stat.r b{color:var(--red)} .stat.y b{color:var(--yellow)}
+.stat.m b{color:var(--magenta)} .stat.b b{color:var(--blue)}
+.stagebar{display:flex;align-items:center;gap:12px;margin-bottom:9px}
+#stage{font-size:12.5px;color:var(--accent-2);font-weight:700;flex:1;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.progress{height:6px;background:var(--glass-2);border-radius:99px;overflow:hidden;border:1px solid var(--line)}
+.progress>div{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));
+  border-radius:99px;transition:width .6s cubic-bezier(.2,.8,.2,1);box-shadow:0 0 14px rgba(99,102,241,.55)}
+#log{background:rgba(2,6,14,.5);border:1px solid var(--line);border-radius:12px;padding:12px;height:186px;
+  overflow-y:auto;font:12px/1.7 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-all;margin-top:14px}
+html[data-theme="light"] #log{background:rgba(255,255,255,.5)}
+#log .t{color:var(--faint)}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:9px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ── chart ────────────────────────────────────────────────── */
+.chart-box{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.legend{display:flex;flex-direction:column;gap:7px;font-size:12.5px;min-width:170px}
+.legend div{display:flex;align-items:center;gap:9px}
+.legend i{width:10px;height:10px;border-radius:3px;flex:none}
+.legend b{margin-left:auto;font-variant-numeric:tabular-nums}
+
+/* ── table ────────────────────────────────────────────────── */
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:13px}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip{padding:5px 12px;border-radius:999px;font-size:11.5px;font-weight:700;background:var(--glass-2);
+  border:1px solid var(--line);color:var(--dim);cursor:pointer;transition:.18s;user-select:none;white-space:nowrap}
+.chip:hover{color:var(--text);border-color:var(--line-strong)}
+.chip.on{color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent}
+.search{flex:1;min-width:180px;max-width:300px}
+.table-wrap{max-height:540px;overflow:auto;border-radius:12px;border:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);
+  padding:11px 13px;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2;
+  background:var(--glass-2);backdrop-filter:blur(16px);cursor:pointer;user-select:none;white-space:nowrap;font-weight:700}
+th:hover{color:var(--accent)}
+th .arr{opacity:.45;font-size:9px}
+td{padding:10px 13px;border-bottom:1px var(--line);vertical-align:middle}
+tbody tr.row{cursor:pointer;transition:.14s;border-bottom:1px solid var(--line)}
+tbody tr.row:hover{background:var(--accent-soft)}
+tbody tr.row:last-child{border-bottom:none}
+.tag{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:10.5px;
+  font-weight:800;letter-spacing:.03em;white-space:nowrap}
+.tag::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.t-working{background:rgba(16,185,129,.13);color:var(--green)}
+.t-auth_required{background:rgba(245,158,11,.13);color:var(--yellow)}
+.t-rate_limited,.t-needs_params{background:rgba(59,130,246,.12);color:var(--blue)}
+.t-not_working,.t-error{background:rgba(239,68,68,.12);color:var(--red)}
+.t-skipped{background:rgba(100,116,139,.14);color:var(--dim)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.url{max-width:290px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.copy{opacity:0;color:var(--accent);cursor:pointer;margin-left:7px;font-size:11px;transition:.15s}
+tr.row:hover .copy{opacity:.9}
+
+/* ── cards / history / downloads ──────────────────────────── */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(272px,1fr));gap:13px}
+.card{background:var(--glass-2);border:1px solid var(--line);border-radius:14px;padding:14px;transition:.18s}
+.card:hover{transform:translateY(-2px);border-color:rgba(217,70,239,.35)}
+.card h3{font-size:13px;margin-bottom:5px;font-weight:700}
+.card .kind{font-size:9.5px;color:var(--magenta);font-weight:800;text-transform:uppercase;letter-spacing:.09em}
+.card ul{margin:8px 0 0 16px;font-size:11.5px;color:var(--dim);max-height:118px;overflow:auto}
+.card.warn{border-color:rgba(245,158,11,.32)}
+.card.warn .kind{color:var(--yellow)}
+.card.warn:hover{border-color:rgba(245,158,11,.65)}
+.history{display:flex;flex-direction:column;gap:9px;max-height:280px;overflow:auto}
+.hitem{display:flex;align-items:center;gap:12px;background:var(--glass-2);border:1px solid var(--line);
+  border-radius:12px;padding:10px 13px;cursor:pointer;transition:.18s;font-size:12.5px}
+.hitem:hover{border-color:var(--accent);transform:translateX(2px)}
+.hitem .mode{font-weight:800;color:var(--accent);text-transform:uppercase;font-size:9.5px;letter-spacing:.09em;
+  background:var(--accent-soft);padding:3px 9px;border-radius:99px;flex:none}
+.hitem .when{color:var(--faint);font-size:11px;margin-top:1px}
+.hitem .sum{margin-left:auto;color:var(--dim);font-size:11px;text-align:right;white-space:nowrap}
+.dls{display:flex;gap:10px;flex-wrap:wrap}
+.dls a{background:var(--glass-2);border:1px solid var(--line);color:var(--accent);text-decoration:none;
+  padding:9px 15px;border-radius:11px;font-size:12px;font-weight:700;transition:.18s}
+.dls a:hover{border-color:var(--accent);transform:translateY(-2px)}
+.empty{padding:26px;text-align:center;color:var(--faint);font-size:12.5px}
+
+/* ── modal + toasts ───────────────────────────────────────── */
+#modal{position:fixed;inset:0;background:rgba(2,5,12,.72);backdrop-filter:blur(8px);display:none;
+  align-items:center;justify-content:center;padding:30px;z-index:100}
+#modal.on{display:flex}
+#modal .box{background:var(--glass);border:1px solid var(--line-strong);border-radius:20px;max-width:900px;width:100%;
+  max-height:88vh;overflow:auto;padding:26px;backdrop-filter:blur(30px) saturate(170%);box-shadow:var(--shadow)}
+#modal pre{background:rgba(2,6,14,.5);border:1px solid var(--line);border-radius:12px;padding:15px;
+  font-size:12px;overflow:auto;margin-top:14px;white-space:pre-wrap;word-break:break-all;line-height:1.65}
+html[data-theme="light"] #modal pre{background:rgba(255,255,255,.55)}
+.close-x{float:right;background:none;border:none;color:var(--dim);font-size:22px;line-height:1;padding:4px}
+#toasts{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:11px;z-index:200;max-width:340px}
+.toast{background:var(--glass);border:1px solid var(--line-strong);border-radius:14px;padding:14px 18px;
+  backdrop-filter:blur(22px);box-shadow:var(--shadow);animation:pop .35s cubic-bezier(.2,.9,.3,1.25);font-size:13px}
+.toast.ok{border-color:rgba(16,185,129,.5)} .toast.err{border-color:rgba(239,68,68,.5)} .toast.info{border-color:rgba(99,102,241,.5)}
+.toast b{display:block;margin-bottom:2px;font-size:13px}
+.toast .sub{color:var(--dim);font-size:11.5px;word-break:break-word}
+@keyframes pop{from{transform:translateX(46px) scale(.94);opacity:0}}
+.toast.out{animation:popout .28s forwards}
+@keyframes popout{to{transform:translateX(46px);opacity:0}}
+</style>
+</head>
+<body>
+<div class="orb a"></div><div class="orb b"></div><div class="orb c"></div>
+
+<header>
+  <div class="brand"><span class="mark">🔍</span>API <em>HUNTER</em><small>localhost dashboard</small></div>
+  <div class="spacer"></div>
+  <span class="pill" id="statusPill">idle</span>
+  <button class="icon-btn" id="themeBtn" title="Toggle light / dark theme">🌙</button>
+</header>
+
+<main>
+  <!-- ════════ controls ════════ -->
+  <div class="col">
+    <section class="panel">
+      <h2><span class="ic">🧬</span>Reverse engineering <span class="tag">LIVE</span></h2>
+      <div class="rev-grid">
+        <div class="rev-card" id="revWebBox">
+          <h3>🌐 Website <span class="tag">JS MINING</span></h3>
+          <input id="revUrl" placeholder="https://example.com" autocomplete="off">
+          <div class="row" style="margin-top:10px">
+            <div><label style="margin:0 0 4px">JS assets</label><input id="revMaxJs" type="number" value="15" min="1" max="60"></div>
+            <div style="display:flex;align-items:flex-end"><button class="btn-primary" style="margin:0" id="revWebBtn">Mine APIs ▶</button></div>
+          </div>
+        </div>
+        <div class="rev-card" id="revApkBox">
+          <h3>📱 APK <span class="tag">DEX MINING</span></h3>
+          <input id="revApkPath" list="sampleApks" placeholder="./app.apk" autocomplete="off">
+          <datalist id="sampleApks"></datalist>
+          <div class="checks"><label><input type="checkbox" id="revApkDeep"> apktool / jadx deep scan</label></div>
+          <button class="btn-primary" style="margin:10px 0 0" id="revApkBtn">Mine APIs ▶</button>
+        </div>
+      </div>
+      <p class="hint" style="margin-top:12px">Mines a website's JavaScript (<span class="mono">fetch / axios / XHR, baseURL, /api/v1…, GraphQL, spec files, hardcoded keys</span>) or an APK's DEX bytecode &amp; assets for hidden APIs — then runs the full <b>test → metadata → report</b> pipeline automatically.</p>
+    </section>
+
+    <section class="panel">
+      <h2><span class="ic">🎛️</span>Hunt controls</h2>
+      <label>Mode</label>
+      <select id="mode">
+        <option value="hunt">Full hunt — catalogs + test + metadata</option>
+        <option value="discover">Discover only (build catalog)</option>
+        <option value="reverse-web">Reverse-web (mine a website's JS)</option>
+        <option value="reverse-apk">Reverse-apk (mine an APK)</option>
+      </select>
+      <div id="targetBox" class="hidden">
+        <label>Target (website URL or .apk path)</label>
+        <input id="target" placeholder="https://example.com  or  ./app.apk">
+      </div>
+      <div id="keywordBox">
+        <label>Keyword</label>
+        <input id="keyword" placeholder="weather, crypto, animals…">
+        <div class="row">
+          <div><label>Category</label><input id="category" placeholder="any"></div>
+          <div><label>Auth</label>
+            <select id="auth"><option>any</option><option>none</option><option>apiKey</option><option>OAuth</option></select>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div><label>Limit</label><input id="limit" type="number" value="40"></div>
+        <div><label>Workers</label><input id="workers" type="number" value="12"></div>
+        <div><label>Timeout (s)</label><input id="timeout" type="number" value="10"></div>
+      </div>
+      <div class="row">
+        <div><label>Endpoint testing</label>
+          <select id="endpoints"><option value="base">base URLs</option><option value="deep">deep (spec endpoints)</option><option value="off">off</option></select>
+        </div>
+        <div><label>APIs.guru specs</label><input id="specs" type="number" value="30"></div>
+      </div>
+      <label>Sources</label>
+      <div class="checks" id="sourceBox">
+        <label><input type="checkbox" value="public-apis" checked> public-apis</label>
+        <label><input type="checkbox" value="apisguru" checked> apis.guru</label>
+        <label><input type="checkbox" value="github" checked> github</label>
+        <label><input type="checkbox" value="builtin" checked> builtin</label>
+      </div>
+      <label>Headers (one per line, e.g. X-Api-Key: abc)</label>
+      <textarea id="headers" placeholder="X-Api-Key: your-key-here"></textarea>
+      <div class="checks">
+        <label><input type="checkbox" id="insecure"> skip TLS verify</label>
+        <label><input type="checkbox" id="meta_probe" checked> metadata probing</label>
+        <label><input type="checkbox" id="apk_deep"> apk deep tools</label>
+      </div>
+      <button class="btn-primary" id="startBtn">▶ Start hunt <span class="kbd">ctrl+↵</span></button>
+      <button class="btn-danger hidden" id="stopBtn">■ Stop hunt</button>
+      <button class="btn-ghost hidden" id="retryBtn">♻ Retry failed APIs</button>
+    </section>
+
+    <section class="panel">
+      <h2><span class="ic">🤖</span>Automations</h2>
+      <div class="checks">
+        <label><input type="checkbox" id="autoEnabled"> scheduled hunts</label>
+        <div style="flex:1;min-width:90px"><input id="autoInterval" type="number" value="60" min="1" title="interval in minutes"></div>
+      </div>
+      <p class="hint" style="margin-top:8px">Runs the current form's config every N minutes while the dashboard is open. <span id="autoStatus"></span></p>
+      <label style="margin-top:12px">Webhook URL (Discord / Slack / generic)</label>
+      <input id="webhook" placeholder="https://discord.com/api/webhooks/…">
+      <p class="hint" style="margin-top:6px">Posts a run summary (working / key-needed / dead / metadata / secrets) when a hunt finishes.</p>
+      <button class="btn-ghost" id="saveAutoBtn">💾 Save automation settings</button>
+    </section>
+
+    <section class="panel">
+      <h2><span class="ic">⭐</span>Presets</h2>
+      <div class="row">
+        <select id="presetSel"><option value="">— choose preset —</option></select>
+        <button class="btn-ghost" style="width:auto;margin:0" id="loadPresetBtn">Load</button>
+      </div>
+      <button class="btn-ghost" id="savePresetBtn">⭐ Save current form as preset</button>
+    </section>
+  </div>
+
+  <!-- ════════ main ════════ -->
+  <div class="col">
+    <section class="panel">
+      <h2><span class="ic">📊</span>Progress</h2>
+      <div class="stats">
+        <div class="stat"><b id="c-discovered">0</b><span>discovered</span></div>
+        <div class="stat b"><b id="c-tested">0</b><span>tested</span></div>
+        <div class="stat g"><b id="c-working">0</b><span>working</span></div>
+        <div class="stat r"><b id="c-dead">0</b><span>dead</span></div>
+        <div class="stat m"><b id="c-meta">0</b><span>metadata APIs</span></div>
+        <div class="stat y"><b id="c-secrets">0</b><span>secrets</span></div>
+        <div class="stat"><b id="c-elapsed">0s</b><span>elapsed</span></div>
+      </div>
+      <div class="stagebar"><div id="stage"></div><span class="mono hint" id="stagePct"></span></div>
+      <div class="progress"><div id="progressBar"></div></div>
+      <div id="log"></div>
+    </section>
+
+    <section class="panel">
+      <h2><span class="ic">🍩</span>Status distribution</h2>
+      <div class="chart-box">
+        <svg id="donut" width="152" height="152" viewBox="0 0 152 152" role="img" aria-label="status distribution"></svg>
+        <div class="legend" id="legend"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2><span class="ic">📋</span>Results <span class="mono hint" id="resultCount"></span>
+        <span class="spacer"></span>
+        <button class="icon-btn" id="copyAllBtn" title="Copy all working URLs">📑</button>
+      </h2>
+      <div class="toolbar">
+        <div class="chips" id="statusChips"></div>
+        <input class="search" id="searchBox" placeholder="🔎 filter by name / url / category…">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th data-s="name">API <span class="arr">↕</span></th>
+            <th data-s="source">Source <span class="arr">↕</span></th>
+            <th data-s="auth">Auth <span class="arr">↕</span></th>
+            <th data-s="status">Status <span class="arr">↕</span></th>
+            <th data-s="http" class="num">HTTP <span class="arr">↕</span></th>
+            <th data-s="ms" class="num">ms <span class="arr">↕</span></th>
+            <th data-s="url">URL <span class="arr">↕</span></th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel hidden" id="metaPanel">
+      <h2><span class="ic">📦</span>Metadata APIs &amp; secrets</h2>
+      <div class="cards" id="metaCards"></div>
+    </section>
+
+    <section class="panel">
+      <h2><span class="ic">🕘</span>Hunt history</h2>
+      <div class="history" id="history"></div>
+    </section>
+
+    <section class="panel">
+      <h2><span class="ic">💾</span>Reports</h2>
+      <div class="dls" id="dls"></div>
+    </section>
+  </div>
+</main>
+
+<div id="toasts"></div>
+
+<div id="modal"><div class="box">
+  <button class="close-x" id="modalClose" aria-label="close">✕</button>
+  <h2 id="mTitle" style="margin-bottom:8px;font-size:17px"></h2>
+  <pre id="mBody"></pre>
+</div></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ── helpers ─────────────────────────────────────────────── */
+var $ = function(id){ return document.getElementById(id); };
+var results = [];
+var lastLogLen = -1, lastStatus = "", lastResultsJSON = "";
+var sortKey = "status", sortDir = 1, statusFilter = "all", searchText = "";
+
+var STATUS_LABEL = {working:"WORKING",auth_required:"KEY NEEDED",rate_limited:"RATE LIMITED",needs_params:"NEEDS PARAMS",not_working:"DEAD",error:"ERROR",skipped:"SKIPPED"};
+var STATUS_COLOR = {working:"#10b981",auth_required:"#f59e0b",rate_limited:"#3b82f6",needs_params:"#3b82f6",not_working:"#ef4444",error:"#ef4444",skipped:"#94a3b8"};
+
+function esc(s){
+  return String(s === null || s === undefined ? "" : s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
+
+function toast(title, sub, kind, ms){
+  kind = kind || "info"; ms = ms || 5000;
+  var el = document.createElement("div");
+  el.className = "toast " + kind;
+  var b = document.createElement("b"); b.textContent = title;
+  el.appendChild(b);
+  if (sub){ var d = document.createElement("div"); d.className = "sub"; d.textContent = sub; el.appendChild(d); }
+  $("toasts").appendChild(el);
+  setTimeout(function(){ el.classList.add("out"); setTimeout(function(){ el.remove(); }, 320); }, ms);
+}
+
+function api(path, opts){
+  opts = opts || {};
+  return fetch(path, opts).then(function(r){
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  });
+}
+
+function copyText(text){
+  if (!text) return;
+  function fallback(){
+    var ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); toast("Copied", text.slice(0, 70), "info", 1800); }
+    catch(e){ toast("Copy failed", "select and copy manually", "err", 2500); }
+    ta.remove();
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){ toast("Copied", text.slice(0, 70), "info", 1800); }, fallback);
+  } else { fallback(); }
+}
+window.copyText = copyText;
+
+/* ── theme ───────────────────────────────────────────────── */
+var savedTheme = "dark";
+try { savedTheme = localStorage.getItem("ah-theme") || "dark"; } catch(e){}
+document.documentElement.setAttribute("data-theme", savedTheme);
+$("themeBtn").textContent = savedTheme === "dark" ? "🌙" : "☀️";
+$("themeBtn").onclick = function(){
+  var t = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", t);
+  try { localStorage.setItem("ah-theme", t); } catch(e){}
+  $("themeBtn").textContent = t === "dark" ? "🌙" : "☀️";
+  renderResults();
+};
+
+/* ── state ───────────────────────────────────────────────── */
+function renderState(s){
+  if (!s) return;
+  $("statusPill").textContent = s.status + (s.viewing_history ? " · history" : "");
+  $("statusPill").className = "pill " + s.status;
+  $("stage").textContent = s.stage ? ("▸ " + s.stage) : (s.status === "done" ? "✓ ready" : "");
+  var keys = ["discovered","tested","working","dead","meta","secrets"];
+  for (var i = 0; i < keys.length; i++){
+    var el = $("c-" + keys[i]);
+    if (el) el.textContent = (s.counts && s.counts[keys[i]]) || 0;
+  }
+  $("c-elapsed").textContent = (s.elapsed || 0) + "s";
+  var disc = (s.counts && s.counts.discovered) || 0, tested = (s.counts && s.counts.tested) || 0;
+  var pct = disc ? Math.min(100, Math.round(tested / disc * 100)) : (s.status === "running" ? 12 : (s.status === "done" ? 100 : 0));
+  $("progressBar").style.width = pct + "%";
+  $("stagePct").textContent = (s.status === "running" && disc) ? (tested + "/" + disc) : "";
+  $("startBtn").disabled = s.status === "running";
+  $("stopBtn").classList.toggle("hidden", s.status !== "running");
+  $("retryBtn").classList.toggle("hidden", s.status !== "done" || !results.length);
+  var a = s.automation || {};
+  $("autoStatus").textContent = a.enabled ? ("⏱ next run in " + Math.max(0, Math.round(((a.next_run || 0) * 1000 - Date.now()) / 60000)) + " min") : "";
+  if (lastStatus !== s.status && lastStatus !== ""){
+    if (s.status === "done"){
+      var sum = s.summary || {};
+      toast("Hunt finished", (sum.total || 0) + " APIs · " + ((sum.by_status || {}).working || 0) + " working · " + (sum.metadata_apis || 0) + " metadata APIs", "ok");
+    } else if (s.status === "error"){ toast("Hunt failed", s.error || "", "err", 9000); }
+    else if (s.status === "cancelled"){ toast("Hunt cancelled", "", "info"); }
+  }
+  lastStatus = s.status;
+  var log = $("log"), logs = (s.logs || []);
+  if (logs.length !== lastLogLen){
+    var html = "";
+    for (var j = 0; j < logs.length; j++){
+      html += '<span class="t">' + esc(logs[j].ts) + "</span> " + esc(logs[j].msg) + "\n";
+    }
+    log.innerHTML = html;
+    log.scrollTop = log.scrollHeight;
+    lastLogLen = logs.length;
+  }
+  renderHistory(s.history || []);
+}
+
+/* ── table ───────────────────────────────────────────────── */
+function statusTag(st){ return '<span class="tag t-' + esc(st) + '">' + esc(STATUS_LABEL[st] || st) + "</span>"; }
+
+function filteredResults(){
+  var rows = [];
+  for (var i = 0; i < results.length; i++) rows.push({e: results[i], i: i});
+  if (statusFilter !== "all"){
+    rows = rows.filter(function(r){ return ((r.e.test || {}).status || "skipped") === statusFilter; });
+  }
+  if (searchText){
+    var q = searchText.toLowerCase();
+    rows = rows.filter(function(r){
+      var e = r.e;
+      return ((e.name || "") + " " + (e.url || "") + " " + (e.category || "") + " " + (e.description || "")).toLowerCase().indexOf(q) !== -1;
+    });
+  }
+  function val(r){
+    var t = r.e.test || {};
+    switch (sortKey){
+      case "http": return t.http_status || 0;
+      case "ms": return t.latency_ms || 0;
+      case "status": return t.status || "zzz";
+      case "url": return (r.e.base_url || r.e.url || "").toLowerCase();
+      default: return String(r.e[sortKey] || "").toLowerCase();
+    }
+  }
+  rows.sort(function(a, b){ var x = val(a), y = val(b); return (x > y ? 1 : x < y ? -1 : 0) * sortDir; });
+  return rows;
+}
+
+function renderResults(){
+  var rows = filteredResults();
+  $("resultCount").textContent = results.length ? ("— " + results.length + " APIs") : "";
+  var html = "";
+  for (var k = 0; k < rows.length; k++){
+    var e = rows[k].e, i = rows[k].i, t = e.test || {};
+    var url = e.base_url || e.url || "";
+    html += '<tr class="row" data-i="' + i + '">'
+      + "<td><b>" + esc(e.name) + "</b></td>"
+      + '<td class="mono hint">' + esc(e.source) + "</td>"
+      + "<td>" + esc(e.auth || "?") + "</td>"
+      + "<td>" + statusTag(t.status || "skipped") + "</td>"
+      + '<td class="mono num">' + (t.http_status == null ? "-" : t.http_status) + "</td>"
+      + '<td class="mono num">' + (t.latency_ms == null ? "-" : Math.round(t.latency_ms)) + "</td>"
+      + '<td class="mono"><span class="url" title="' + esc(e.url) + '">' + esc(url) + '</span><span class="copy" data-copy="' + esc(url) + '">⧉</span></td>'
+      + "</tr>";
+  }
+  if (!rows.length){
+    html = '<tr><td colspan="7" class="empty">No APIs match the current filter.</td></tr>';
+  }
+  $("rows").innerHTML = html;
+
+  var counts = {};
+  for (var m = 0; m < results.length; m++){
+    var st = (results[m].test || {}).status || "skipped";
+    counts[st] = (counts[st] || 0) + 1;
+  }
+  var order = ["working","auth_required","rate_limited","needs_params","not_working","error","skipped"];
+  var chips = '<span class="chip' + (statusFilter === "all" ? " on" : "") + '" data-f="all">All ' + results.length + "</span>";
+  for (var n = 0; n < order.length; n++){
+    if (!counts[order[n]]) continue;
+    chips += '<span class="chip' + (statusFilter === order[n] ? " on" : "") + '" data-f="' + order[n] + '">' + STATUS_LABEL[order[n]] + " " + counts[order[n]] + "</span>";
+  }
+  $("statusChips").innerHTML = chips;
+  renderDonut(counts);
+  renderMetaCards();
+  renderDownloads();
+}
+
+/* row / chip / copy delegation (no inline handlers) */
+$("rows").addEventListener("click", function(ev){
+  var copyEl = ev.target.closest ? ev.target.closest("[data-copy]") : null;
+  if (copyEl){ copyText(copyEl.getAttribute("data-copy")); return; }
+  var tr = ev.target.closest ? ev.target.closest("tr.row") : null;
+  if (tr) showDetail(parseInt(tr.getAttribute("data-i"), 10));
+});
+$("statusChips").addEventListener("click", function(ev){
+  var chip = ev.target.closest ? ev.target.closest("[data-f]") : null;
+  if (chip){ statusFilter = chip.getAttribute("data-f"); renderResults(); }
+});
+$("searchBox").addEventListener("input", function(e){ searchText = e.target.value.trim(); renderResults(); });
+
+var headers = document.querySelectorAll("th[data-s]");
+for (var h = 0; h < headers.length; h++){
+  (function(th){
+    th.addEventListener("click", function(){
+      var k = th.getAttribute("data-s");
+      if (sortKey === k){ sortDir *= -1; } else { sortKey = k; sortDir = 1; }
+      var arrs = document.querySelectorAll("th .arr");
+      for (var a = 0; a < arrs.length; a++) arrs[a].textContent = "↕";
+      var arr = th.querySelector(".arr");
+      if (arr) arr.textContent = sortDir === 1 ? "↑" : "↓";
+      renderResults();
+    });
+  })(headers[h]);
+}
+
+/* ── donut ───────────────────────────────────────────────── */
+function renderDonut(counts){
+  var svg = $("donut"), legend = $("legend");
+  var entries = [];
+  for (var st in counts){ if (counts[st] > 0) entries.push([st, counts[st]]); }
+  var total = entries.reduce(function(a, p){ return a + p[1]; }, 0);
+  if (!total){
+    svg.innerHTML = "";
+    legend.innerHTML = '<div class="hint">No data yet — start a hunt.</div>';
+    return;
+  }
+  var C = 2 * Math.PI * 55, offset = 0, circles = "";
+  entries.forEach(function(pair){
+    var frac = pair[1] / total;
+    circles += '<circle cx="76" cy="76" r="55" fill="none" stroke="' + (STATUS_COLOR[pair[0]] || "#94a3b8")
+      + '" stroke-width="18" stroke-dasharray="' + (frac * C).toFixed(2) + " " + C.toFixed(2)
+      + '" stroke-dashoffset="' + (-offset * C).toFixed(2) + '" transform="rotate(-90 76 76)" opacity=".93"/>';
+    offset += frac;
+  });
+  svg.innerHTML = circles
+    + '<text x="76" y="72" text-anchor="middle" fill="var(--text)" font-size="25" font-weight="800">' + total + "</text>"
+    + '<text x="76" y="92" text-anchor="middle" fill="var(--dim)" font-size="9.5" letter-spacing="1.2">APIs</text>';
+  var lh = "";
+  entries.forEach(function(pair){
+    lh += '<div><i style="background:' + (STATUS_COLOR[pair[0]] || "#94a3b8") + '"></i>' + esc(STATUS_LABEL[pair[0]] || pair[0]) + "<b>" + pair[1] + "</b></div>";
+  });
+  legend.innerHTML = lh;
+}
+
+/* ── metadata cards ──────────────────────────────────────── */
+function renderMetaCards(){
+  var metas = [], secrets = [];
+  results.forEach(function(e){
+    (e.metadata_apis || []).forEach(function(m){ metas.push([e, m]); });
+    (e.secrets || []).forEach(function(s){ secrets.push([e, s]); });
+  });
+  $("metaPanel").classList.toggle("hidden", !metas.length && !secrets.length);
+  var html = "";
+  metas.forEach(function(pair){
+    var e = pair[0], m = pair[1], eps = m.endpoints || [];
+    html += '<div class="card"><div class="kind">' + esc(m.kind) + "</div><h3>" + esc(e.name) + "</h3>"
+      + '<div class="mono hint"><span class="url" style="max-width:100%" title="' + esc(m.url) + '">' + esc(m.url) + '</span><span class="copy" data-copy="' + esc(m.url || "") + '">⧉</span></div>'
+      + '<div class="mono hint">base: ' + esc(m.base_url || "-") + " · endpoints: " + eps.length + "</div>";
+    if (eps.length){
+      html += "<ul>" + eps.slice(0, 8).map(function(p){ return "<li>" + esc(p) + "</li>"; }).join("")
+        + (eps.length > 8 ? "<li>… +" + (eps.length - 8) + " more</li>" : "") + "</ul>";
+    }
+    html += "</div>";
+  });
+  secrets.forEach(function(pair){
+    var e = pair[0], s = pair[1];
+    html += '<div class="card warn"><div class="kind">' + esc(s.type) + "</div><h3>" + esc(e.name) + "</h3>"
+      + '<div class="mono hint">' + esc((s.key || "").slice(0, 10)) + "… (masked)</div>"
+      + '<div class="mono hint"><span class="url" style="max-width:100%" title="' + esc(s.evidence) + '">' + esc(s.evidence) + "</span></div></div>";
+  });
+  $("metaCards").innerHTML = html;
+}
+
+/* ── downloads ───────────────────────────────────────────── */
+function renderDownloads(){
+  var html = "";
+  ["json","csv","md"].forEach(function(f){
+    html += '<a href="/reports/api-hunt-report.' + f + '" target="_blank" rel="noopener" download>⬇ ' + f.toUpperCase() + " report</a>";
+  });
+  html += '<a href="/reports/catalog.json" target="_blank" rel="noopener" download>⬇ catalog.json</a>';
+  $("dls").innerHTML = html;
+}
+
+/* ── history ─────────────────────────────────────────────── */
+function renderHistory(h){
+  var el = $("history");
+  if (!h.length){
+    el.innerHTML = '<div class="empty">Finished hunts appear here — click one to reload its results.</div>';
+    return;
+  }
+  var html = "";
+  h.forEach(function(r){
+    var when = new Date(r.ts * 1000).toLocaleString();
+    var w = ((r.summary || {}).by_status || {}).working || 0;
+    html += '<div class="hitem" data-h="' + esc(r.id) + '">'
+      + '<span class="mode">' + esc(r.mode) + "</span>"
+      + "<div><div>" + esc(r.config && (r.config.keyword || r.config.target) || "all") + "</div>"
+      + '<div class="when">' + esc(when) + "</div></div>"
+      + '<span class="sum">' + ((r.summary || {}).total || 0) + " APIs · " + w + " working · " + ((r.summary || {}).metadata_apis || 0) + " meta</span></div>";
+  });
+  el.innerHTML = html;
+}
+$("history").addEventListener("click", function(ev){
+  var item = ev.target.closest ? ev.target.closest("[data-h]") : null;
+  if (!item) return;
+  var id = item.getAttribute("data-h");
+  api("/api/history/" + encodeURIComponent(id)).then(function(r){
+    if (r.error){ toast("History", r.error, "err"); return; }
+    results = r.entries || [];
+    renderResults();
+    toast("Loaded past hunt", (r.entries || []).length + " APIs from " + new Date(r.ts * 1000).toLocaleTimeString(), "info");
+  }).catch(function(err){ toast("History failed", String(err), "err"); });
+});
+
+/* ── detail modal ────────────────────────────────────────── */
+function showDetail(i){
+  var e = results[i];
+  if (!e) return;
+  $("mTitle").textContent = (e.name || "API") + " — " + (e.source || "");
+  var t = e.test || {}, out = "";
+  out += "URL:        " + (e.url || "") + "\n";
+  out += "STATUS:     " + (t.status || "-") + " (HTTP " + (t.http_status == null ? "-" : t.http_status) + ", " + (t.latency_ms == null ? "-" : t.latency_ms) + " ms)\n";
+  out += "AUTH:       " + (e.auth || "?") + "\nCATEGORY:   " + (e.category || "-") + "\n";
+  if (e.metadata){
+    out += "\nMETADATA:\n  server:      " + (e.metadata.server || "-") + "\n  powered by:  " + (e.metadata.powered_by || "-")
+      + "\n  ratelimit:   " + JSON.stringify(e.metadata.ratelimit || {})
+      + "\n  json shape:  " + JSON.stringify(e.metadata.json || {}) + "\n";
+  }
+  if (e.endpoints && e.endpoints.length){
+    out += "\nENDPOINTS (" + e.endpoints.length + "):\n";
+    out += e.endpoints.slice(0, 40).map(function(p){ return "  " + p; }).join("\n");
+    if (e.endpoints.length > 40) out += "\n  … +" + (e.endpoints.length - 40) + " more";
+    out += "\n";
+  }
+  if (t.endpoint_tests && t.endpoint_tests.length){
+    out += "\nENDPOINT TESTS:\n" + t.endpoint_tests.map(function(x){ return "  [" + x.status + "] " + x.url; }).join("\n") + "\n";
+  }
+  if (t.sample) out += "\nSAMPLE RESPONSE:\n" + String(t.sample).slice(0, 700) + "\n";
+  (e.metadata_apis || []).forEach(function(m){
+    out += "\nMETADATA API (" + m.kind + "): " + m.url + "\n  base: " + (m.base_url || "-") + "\n  endpoints: " + (m.endpoints || []).length + "\n";
+  });
+  (e.secrets || []).forEach(function(s){
+    out += "\nSECRET (" + s.type + "): " + String(s.key).slice(0, 8) + "… (masked)\n  " + (s.evidence || "") + "\n";
+  });
+  $("mBody").textContent = out;
+  $("modal").classList.add("on");
+}
+window.showDetail = showDetail;
+$("modalClose").onclick = function(){ $("modal").classList.remove("on"); };
+$("modal").addEventListener("click", function(ev){ if (ev.target.id === "modal") ev.target.classList.remove("on"); });
+
+$("copyAllBtn").onclick = function(){
+  var urls = results.filter(function(e){ return (e.test || {}).status === "working"; })
+    .map(function(e){ return e.base_url || e.url; }).join("\n");
+  if (!urls){ toast("Nothing to copy", "no working APIs in the current results", "info", 2200); return; }
+  copyText(urls);
+};
+
+/* ── form ────────────────────────────────────────────────── */
+function currentConfig(){
+  var sources = [];
+  var boxes = document.querySelectorAll("#sourceBox input:checked");
+  for (var i = 0; i < boxes.length; i++) sources.push(boxes[i].value);
+  return {
+    mode: $("mode").value,
+    target: $("target").value,
+    keyword: $("keyword").value,
+    category: $("category").value,
+    auth: $("auth").value,
+    limit: parseInt($("limit").value, 10) || 0,
+    workers: parseInt($("workers").value, 10) || 12,
+    timeout: parseInt($("timeout").value, 10) || 10,
+    endpoints: $("endpoints").value,
+    specs: parseInt($("specs").value, 10) || 30,
+    sources: sources.join(","),
+    headers: $("headers").value,
+    insecure: $("insecure").checked,
+    meta_probe: $("meta_probe").checked,
+    apk_deep: $("apk_deep").checked,
+    outdir: "apihunter_out"
+  };
+}
+/* Which inputs a mode actually needs: keyword hunts only need a keyword,
+   reverse modes need a target. Keeps the two paths from blocking each other.
+   The dedicated reverse-engineering panel above is always visible. */
+function syncModeUI(){
+  var m = $("mode").value;
+  var rev = m.indexOf("reverse") === 0;
+  $("targetBox").classList.toggle("hidden", !rev);
+  $("keywordBox").classList.toggle("hidden", rev);
+  setTimeout(function(){ $(rev ? "target" : "keyword").focus(); }, 0);
+}
+$("mode").addEventListener("change", syncModeUI);
+syncModeUI();
+
+/* Per-mode validation, so a keyword hunt never asks for an APK/URL. */
+function validateConfig(cfg){
+  var rev = String(cfg.mode || "").indexOf("reverse") === 0;
+  if (rev){
+    if (!cfg.target){ return "Enter a target first — a website URL for reverse-web, or an .apk path for reverse-apk."; }
+    if (cfg.mode === "reverse-web" && !/^https?:\/\//i.test(cfg.target)){
+      return "That does not look like a URL — try https://example.com";
+    }
+    if (cfg.mode === "reverse-apk" && !/\.apk$/i.test(cfg.target)){
+      return "That does not look like an APK — the path should end in .apk";
+    }
+    return null;
+  }
+  if (!(cfg.keyword || "").trim() && !(cfg.category || "").trim()){
+    return "Type a keyword to hunt for (e.g. weather, crypto, anime) — or pick a category.";
+  }
+  return null;
+}
+
+function startWith(cfg){
+  lastLogLen = -1; lastStatus = "";
+  var problem = validateConfig(cfg);
+  if (problem){ toast("Check the form", problem, "err", 6000); return; }
+  var label = String(cfg.mode || "").indexOf("reverse") === 0
+    ? (cfg.target || cfg.mode)
+    : ((cfg.keyword || "all APIs") + " · " + (cfg.mode || "hunt"));
+  api("/api/start", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(cfg)})
+    .then(function(){ toast("Hunt started", label, "ok", 3000); })
+    .catch(function(err){ toast("Could not start", String(err), "err"); });
+}
+$("startBtn").onclick = function(){ startWith(currentConfig()); };
+
+$("revWebBtn").onclick = function(){
+  var cfg = currentConfig();
+  cfg.mode = "reverse-web";
+  cfg.target = $("revUrl").value.trim();
+  cfg.max_js = parseInt($("revMaxJs").value, 10) || 15;
+  startWith(cfg);
+};
+$("revApkBtn").onclick = function(){
+  var cfg = currentConfig();
+  cfg.mode = "reverse-apk";
+  cfg.target = $("revApkPath").value.trim();
+  cfg.apk_deep = $("revApkDeep").checked;
+  startWith(cfg);
+};
+$("stopBtn").onclick = function(){
+  api("/api/stop", {method: "POST"}).then(function(){
+    toast("Stopping…", "finishing in-flight requests", "info");
+  }).catch(function(){});
+};
+$("retryBtn").onclick = function(){
+  api("/api/retry-dead", {method: "POST"}).then(function(r){
+    toast("Retrying failed APIs", r.retried ? (r.retried + " APIs re-queued") : (r.message || r.error || ""), "info");
+  }).catch(function(err){ toast("Retry failed", String(err), "err"); });
+};
+document.addEventListener("keydown", function(ev){
+  if (ev.ctrlKey && ev.key === "Enter" && !$("startBtn").disabled) $("startBtn").click();
+  if (ev.key === "Escape") $("modal").classList.remove("on");
+});
+
+/* ── automations ─────────────────────────────────────────── */
+$("saveAutoBtn").onclick = function(){
+  var body = {
+    enabled: $("autoEnabled").checked,
+    interval_min: parseInt($("autoInterval").value, 10) || 60,
+    config: currentConfig(),
+    webhook: $("webhook").value.trim()
+  };
+  api("/api/auto", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)})
+    .then(function(){
+      toast("Automation saved", body.enabled ? ("every " + body.interval_min + " min") : "disabled", "ok");
+    })
+    .catch(function(err){ toast("Save failed", String(err), "err"); });
+};
+
+/* ── presets ─────────────────────────────────────────────── */
+function loadPresetList(){
+  var presets = {};
+  try { presets = JSON.parse(localStorage.getItem("ah-presets") || "{}"); } catch(e){}
+  var html = '<option value="">— choose preset —</option>';
+  Object.keys(presets).forEach(function(k){ html += "<option>" + esc(k) + "</option>"; });
+  $("presetSel").innerHTML = html;
+}
+function applyConfig(c){
+  $("mode").value = c.mode || "hunt";
+  $("target").value = c.target || "";
+  $("keyword").value = c.keyword || "";
+  $("category").value = c.category || "";
+  $("auth").value = c.auth || "any";
+  $("limit").value = c.limit || 40;
+  $("workers").value = c.workers || 12;
+  $("timeout").value = c.timeout || 10;
+  $("endpoints").value = c.endpoints || "base";
+  $("specs").value = c.specs || 30;
+  $("headers").value = c.headers || "";
+  $("insecure").checked = !!c.insecure;
+  $("meta_probe").checked = c.meta_probe !== false;
+  $("apk_deep").checked = !!c.apk_deep;
+  var want = (c.sources || "").split(",");
+  var boxes = document.querySelectorAll("#sourceBox input");
+  for (var i = 0; i < boxes.length; i++){
+    boxes[i].checked = !c.sources || want.indexOf(boxes[i].value) !== -1;
+  }
+  syncModeUI();
+}
+$("savePresetBtn").onclick = function(){
+  var name = prompt("Preset name:", "my hunt");
+  if (!name) return;
+  var presets = {};
+  try { presets = JSON.parse(localStorage.getItem("ah-presets") || "{}"); } catch(e){}
+  presets[name] = currentConfig();
+  try { localStorage.setItem("ah-presets", JSON.stringify(presets)); } catch(e){}
+  loadPresetList();
+  toast("Preset saved", name, "ok");
+};
+$("loadPresetBtn").onclick = function(){
+  var name = $("presetSel").value;
+  if (!name) return;
+  var presets = {};
+  try { presets = JSON.parse(localStorage.getItem("ah-presets") || "{}"); } catch(e){}
+  if (presets[name]){ applyConfig(presets[name]); toast("Preset loaded", name, "ok"); }
+};
+loadPresetList();
+
+/* ── sample APKs ─────────────────────────────────────────── */
+api("/api/samples").then(function(list){
+  var html = "";
+  (list || []).forEach(function(s){
+    html += '<option value="' + esc(s) + '">' + esc(String(s).split("/").pop()) + "</option>";
+  });
+  $("sampleApks").innerHTML = html;
+}).catch(function(){});
+
+/* ── live loop ───────────────────────────────────────────── */
+try {
+  var es = new EventSource("/events");
+  es.onerror = function(){ /* browser auto-reconnects */ };
+  es.onmessage = function(ev){
+    try {
+      var msg = JSON.parse(ev.data);
+      if (msg && msg.type === "state") renderState(msg.data);
+    } catch(e){}
+  };
+} catch(e){}
+
+setInterval(function(){
+  api("/api/state").then(function(s){
+    renderState(s);
+    if (s.webhook && !$("webhook").value) $("webhook").value = s.webhook;
+    if (s.automation && s.automation.enabled) $("autoEnabled").checked = true;
+    return api("/api/results");
+  }).then(function(r){
+    var json = JSON.stringify(r);
+    if (json !== lastResultsJSON){
+      lastResultsJSON = json;
+      results = r || [];
+      renderResults();
+    }
+  }).catch(function(){ /* server restarting — retry next tick */ });
+}, 1500);
+
+/* ── global error boundary ───────────────────────────────── */
+window.addEventListener("error", function(ev){
+  toast("Dashboard error", String(ev.message || ev.error || "unknown").slice(0, 120), "err", 9000);
+});
+
+})();
+</script>
+</body>
+</html>

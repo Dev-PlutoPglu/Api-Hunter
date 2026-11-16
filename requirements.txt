@@ -1,0 +1,4 @@
+# API Hunter runtime dependencies
+requests>=2.28      # HTTP client for fetching catalogs, specs and testing APIs
+rich>=13.0          # pretty terminal tables, progress bars and panels (optional but recommended)
+PyYAML>=6.0         # parse YAML OpenAPI specs from APIs.guru (optional)

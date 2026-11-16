@@ -1,0 +1,24 @@
+name: Daily API Hunt
+on:
+  schedule: [{cron: "0 6 * * *"}]
+  workflow_dispatch:
+    inputs:
+      keyword: {description: "Keyword", required: false, default: "weather"}
+permissions: {contents: write}
+jobs:
+  hunt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: pip install -r requirements.txt
+      - run: python apihunter.py run -k "${{ inputs.keyword || 'weather' }}" -n 40 -o apihunter_out
+      - uses: actions/upload-artifact@v4
+        with: {name: reports, path: apihunter_out/}
+      - run: |
+          git config user.name "api-hunter-bot"
+          git config user.email "bot@api-hunter.local"
+          git add apihunter_out/ || true
+          git commit -m "chore: daily hunt ${{ inputs.keyword || 'weather' }}" || true
+          git push || true

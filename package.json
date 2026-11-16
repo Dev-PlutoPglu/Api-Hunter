@@ -1,0 +1,13 @@
+{
+  "name": "api-hunter-vscode",
+  "displayName": "API Hunter",
+  "description": "Hunt free APIs from VS Code",
+  "version": "0.1.0",
+  "engines": {"vscode": "^1.80.0"},
+  "publisher": "api-hunter",
+  "activationEvents": ["onCommand:apiHunter.hunt"],
+  "contributes": {
+    "commands": [{"command": "apiHunter.hunt", "title": "API Hunter: Hunt APIs"}],
+    "configuration": {"properties": {"apiHunter.keyword": {"type":"string","default":"weather"}}}
+  }
+}
